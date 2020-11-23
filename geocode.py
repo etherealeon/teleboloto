@@ -24,11 +24,8 @@ def getCoords(city):
                  ["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"]:
                      json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["Point"]["pos"]}
             address.append(d)
-            """address_str.append(json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]
-                               ["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"])
-            address_loc.append(json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["Point"]
-                               ["pos"])"""
+        address.append({'Тут нет нужного города': 'Wrong city'})
         return address
-    # make this exc NOT 2 broad but how.........
+    # : todo make this exc NOT 2 broad but how.........
     except Exception as e:
         return "error"
