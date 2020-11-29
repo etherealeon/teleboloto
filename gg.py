@@ -5,12 +5,9 @@ from geocode import getCoords
 from loll import Configs
 import re
 from users import user_dict
-from telebot.types import Message
-from asyncio import wait_for
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
 
 bot = telebot.TeleBot(Configs.teleboloto)
-
 
 # userStep = {}   so they won't reset every time the bot restarts
 
@@ -22,7 +19,8 @@ class User:
         self.name = ''
         self.heat = True
         self.sex = ''
-        self.loc = ''
+        self.lat = ''
+        self.lon = ''
         self.city = ''
         self.rain = None
         self.car = None
@@ -74,10 +72,10 @@ def acquaintanceSex(message):
 
         current_user = user_dict.get(message.chat.id)
         current_user.name = message.text
-        keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        keyboard.add('Женский').add('Мужской').add('Я небинарное чудо')
+        keyboard_sex = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        keyboard_sex.add('Женский').add('Мужской').add('Я небинарное чудо')
         text_sex = "Принято, %s\nУкажите, пожалуйста, Ваш пол(sex)" % current_user.name
-        msg = bot.reply_to(message, text_sex, reply_markup=keyboard)
+        msg = bot.reply_to(message, text_sex, reply_markup=keyboard_sex)
         bot.register_next_step_handler(msg, acquaintanceHeat)
     else:
         to_begin(message.chat.id)
@@ -93,45 +91,23 @@ def acquaintanceHeat(message):
             current_user.sex = sex
         elif sex == 'Я небинарное чудо':
             text_sex2 = 'В семье не без урода. ЧТОШ....Ну а юбки и платья вы носите?'
-            keyboard1 = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            keyboard1.add("Да", "Нет")
-            msg = bot.reply_to(message, text_sex2, reply_markup=keyboard1)
-            bot.register_next_step_handler(msg, acquaintanceSexAdv)
-            return
-
-        elif sex != 'Да' and sex != 'Нет':
-            bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
-            msg = bot.reply_to(message, 'Ну и шо ты наделало, чудо?\nНормально, кнопочками пол укажи')
+            keyboard_yn = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard_yn.add("Дa", "Hет")
+            msg = bot.reply_to(message, text_sex2, reply_markup=keyboard_yn)
             bot.register_next_step_handler(msg, acquaintanceHeat)
             return
 
+        elif sex == "Дa" or sex == "Hет":
+            current_user.sex = 'Женский'
+            if sex == "Нет":
+                current_user.sex = 'Мужской'
+
         if (current_user.sex == 'Женский') or (current_user.sex == 'Мужской'):
-            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            keyboard.add('Я мезляч').add('Я горяч')
-            msg = bot.reply_to(message, "Хорошо.\nНу тут одно из двух", reply_markup=keyboard)
+            keyboard_heat = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard_heat.add('Я мезляч').add('Я горяч')
+            msg = bot.reply_to(message, "Хорошо.\nНу тут одно из двух", reply_markup=keyboard_heat)
             bot.register_next_step_handler(msg, acquaintanceLoc)
             return
-    else:
-        to_begin(message.chat.id)
-
-
-def acquaintanceSexAdv(message):
-
-    current_user = user_dict.get(message.chat.id)
-    if current_user is not None:
-        if not chek(message, 'wow buddy dat s pretty cool but I need just "yes" or "no"', acquaintanceSexAdv, 'text'):
-            return
-        if message.text.lower() == "да":
-            current_user.sex = 'Женский'
-        elif message.text.lower() == "нет":
-            current_user.sex = 'Мужской'
-        else:
-            msg = bot.reply_to(message, "Просто да или нет.........")
-            bot.register_next_step_handler(msg, acquaintanceSexAdv)
-            return
-        #bot.send_message(message.chat.id, 'Right. №5 to have trouble remembering things')
-        bot.register_next_step_handler(message, acquaintanceHeat) # todo fix
-        return
     else:
         to_begin(message.chat.id)
 
@@ -147,12 +123,12 @@ def acquaintanceLoc(message):
             if message.text == 'Я горяч':
                 current_user.heat = False
             text_loc = "ПРЕВОСХОДНО! А живешь ты где?"
-            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            keyboard_loc = types.ReplyKeyboardMarkup(resize_keyboard=True)
             key_loc = types.KeyboardButton(text='Отправить геолокацию', request_location=True)
-            keyboard.add(key_loc).add('Хочу погоду в другом городе')
-            msg = bot.reply_to(message, text_loc, reply_markup=keyboard)
+            keyboard_loc.add(key_loc).add('Хочу погоду в другом городе')
+            msg = bot.reply_to(message, text_loc, reply_markup=keyboard_loc)
             bot.register_next_step_handler(msg, ProcLoc)
-
+            return
         else:
             msg = bot.reply_to(message, 'Ну кнопочками ответь, ну по-братски')
             bot.register_next_step_handler(msg, acquaintanceLoc)
@@ -168,13 +144,9 @@ def ProcLoc(message):
             return
 
         elif message.location is not None:
-            try:
-                current_user.loc = message.location.longitude, message.location.latitude
-                return
-                # todo как нормально-то его обработать бля?
-            except RuntimeError:
-                bot.send_message(message.chat.id,
-                                 'Не могу получить Вашу геолокацию.\nВозможно,Вы закрыли Приложению доступ к ней')
+            current_user.lon = message.location.longitude
+            current_user.lat = message.location.latitude
+            return
         elif message.text == 'Хочу погоду в другом городе':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни)\nНапример,\nМосква'
             msg = bot.reply_to(message, txt, reply_markup=None)
@@ -195,10 +167,10 @@ def GeoCode(message):
         if not chek(message, 'oh c\'mon just answer as if you were normal guy', GeoCode, 'text'):
             return
 
-        keyboard1 = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
-        keyboard1.add("Да", "Нет")
+        keyboard_yn = types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+        keyboard_yn.add("Да", "Нет")
         current_user.city = message.text
-        msg = bot.reply_to(message, '%s ,верно?' % current_user.city, reply_markup=keyboard1)
+        msg = bot.reply_to(message, '%s ,верно?' % current_user.city, reply_markup=keyboard_yn)
         bot.register_next_step_handler(msg, AdvGeoCode)
     else:
         to_begin(message.chat.id)
@@ -239,12 +211,21 @@ def Coords(call):
     current_user = user_dict.get(call.from_user.id)
     if current_user is not None:
         try:
-            if call.data == 'Wrong city':
-                msg = bot.send_message(call.from_user.id, "Ну, введи еще раз))", reply_markup=types.ReplyKeyboardRemove())
-                bot.register_next_step_handler(msg, GeoCode)  # todo deal with these handlers
+            if call.from_user.type == 'text':
+                if call.data == 'Wrong city':
+                    msg = bot.send_message(call.from_user.id, "Ну, введи еще раз))",
+                                           reply_markup=types.ReplyKeyboardRemove())
+                    bot.register_next_step_handler(msg, GeoCode)
+                else:
+                    to_begin(call.from_user.id)
+                    return
+
             else:
-                current_user.loc = call.data
-                msg = bot.send_message(call.from_user.id, "Принято",
+                current_user.lon = call.data.split(' ')[0]
+                current_user.lat = call.data.split(' ')[1]
+                keyboard_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
+                keyboard_main.add('Погоду сейчас').add('Прогноз на неделю').add('Почасовой прогноз на сегодня')
+                msg = bot.send_message(call.from_user.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
                                        reply_markup=types.ReplyKeyboardRemove())
                 bot.register_next_step_handler(msg, WeatherConfigs)
 
@@ -254,9 +235,9 @@ def Coords(call):
             return
     else:
         to_begin(call.from_user.id)
+        return
 
-
-def WeatherConfigs(message: Message):
+def WeatherConfigs(message):
     print('gagaga')
 
 
