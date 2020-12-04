@@ -20,10 +20,10 @@ def getCurrentWeather(lat, lon):
     pressure = round(weather.pressure.get('press') * 0.75006375541921)
     clouds = weather.clouds
     cityname = my_resp.location.name
-    responce = f'{cityname}. Погода сейчас: {weathercode}.\nТемпература воздуха {temp}°,ощущается как' \
+    response = f'{cityname}.\nПогода сейчас: {weathercode}.\nТемпература воздуха {temp}°, ощущается как' \
                f' {feels_like}°\nВетер {wind_dir}, {wind_speed} м/c. Влажность {humidity}%. \n' \
                f'Давление {pressure} мм рт. ст. Облачность {clouds}%.'
-    return responce
+    return response
 
 
 def getTomorrowWeather(lat, lon):
