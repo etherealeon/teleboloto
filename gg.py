@@ -127,10 +127,10 @@ def acquaintanceLoc(message):
                 current_user.heat = 1
             if message.text == 'Я горяч':
                 current_user.heat = -1
-            text_loc = "ПРЕВОСХОДНО! А живешь ты где?"
+            text_loc = "ПРЕВОСХОДНО! А погода тебе где нужна?"
             keyboard_loc = types.ReplyKeyboardMarkup(resize_keyboard=True)
             key_loc = types.KeyboardButton(text='Отправить геолокацию', request_location=True)
-            keyboard_loc.add(key_loc).add('Хочу погоду в другом городе')
+            keyboard_loc.add(key_loc).add('Введу название города')
             msg = bot.reply_to(message, text_loc, reply_markup=keyboard_loc)
             bot.register_next_step_handler(msg, ProcLoc)
             return
@@ -152,7 +152,7 @@ def ProcLoc(message):
             current_user.lon = message.location.longitude
             current_user.lat = message.location.latitude
             return
-        elif message.text == 'Хочу погоду в другом городе':
+        elif message.text == 'Введу название города':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни) или откуда ты там вообще...' \
                   '\nНапример,\nМосква'
             msg = bot.reply_to(message, txt, reply_markup=None)
@@ -210,12 +210,13 @@ def Coords(call):
                                        reply_markup=keyboard_main)
                 bot.register_next_step_handler(msg, WeatherConfigs)
                 current_user.step = 1
-                return
+                print("end")
 
         except AttributeError as e:
             if current_user.step == 1:
                 return
             else:
+                print("error")
                 msg = bot.send_message(call.from_user.id, 'Пока не выберешь город из списка ничего не произойдет..')
                 bot.register_next_step_handler(msg, Coords)
                 return
@@ -238,3 +239,5 @@ def WeatherConfigs(message):
 bot.enable_save_next_step_handlers(delay=2)
 # bot.load_next_step_handlers()
 bot.polling(none_stop=True)
+
+
