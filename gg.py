@@ -9,8 +9,11 @@ from weatherapi import getCurrentWeather
 
 bot = telebot.TeleBot(Configs.teleboloto)
 
-isRunning: bool = False
-
+# todo fix forests
+# todo make funcs for weather on tomorrow, hourly adn daily
+# todo make fun for choosing clothes
+# todo add Urets's  wonderful voice answ
+#bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
 
 class User:
     def __init__(self):
@@ -22,6 +25,7 @@ class User:
         self.city = ''
         self.rain = None
         self.car = None
+        self.running = False
         self.step = 0
 
 
@@ -32,6 +36,9 @@ def add_user(mci):
 
 
 def chek(message, txt, next_f, *cont_types):
+    if message.content_type == 'text' and message.text == '/start':
+        to_begin(message.chat.id)
+        return
     for cont_type in cont_types:
         if message.content_type == cont_type:
             return True
@@ -43,6 +50,7 @@ def chek(message, txt, next_f, *cont_types):
 
 def to_begin(mci):
     add_user(mci)
+    bot.clear_step_handler_by_chat_id(chat_id=mci)
     text_oa = 'Кажется, данные о тебе не сохранились.\nПожалуйста, пройди регистрацию заново\n' \
               'Как мне тебя называть?'
     msg = bot.send_message(mci, text_oa, reply_markup=types.ReplyKeyboardRemove())
@@ -51,21 +59,17 @@ def to_begin(mci):
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    # todo Forbid starting two interactions from one user simultaneously
-    # global isRunning
-    # if not isRunning:
     add_user(message.chat.id)
-    text_hi = "Привет!\nЯ бот, который еще нихера не умеет, но, давай знакомиться!\nКак мне тебя называть?"
-    msg = bot.reply_to(message, text_hi, reply_markup=types.ReplyKeyboardRemove())
-    bot.register_next_step_handler(msg, acquaintanceSex)
-    # isRunning = True
-
-
-# else:
-# return
+    current_user = user_dict.get(message.chat.id)
+    if not current_user.running:
+        current_user.running = True
+        text_hi = "Привет!\nЯ бот, давай знакомиться!\nКак мне тебя называть?"
+        msg = bot.reply_to(message, text_hi, reply_markup=types.ReplyKeyboardRemove())
+        bot.register_next_step_handler(msg, acquaintanceSex)
 
 
 def acquaintanceSex(message):
+    # todo добавить проверку на количество символов и сделаит словарь тупых шуток для ответа если что-то не так
     current_user = user_dict.get(message.chat.id)
     if current_user is not None:
         if not chek(message, 'wow buddy dat s pretty cool but I need ur NAME', acquaintanceSex, 'text'):
@@ -149,6 +153,7 @@ def ProcLoc(message):
             return
 
         elif message.location is not None:
+            # todo make it float
             current_user.lon = message.location.longitude
             current_user.lat = message.location.latitude
             return
