@@ -1,19 +1,23 @@
 import telebot
 from telebot import types
+import re
 from keyboa import keyboa_maker
+
 from geocode import getCoords
 from loll import Configs
-import re
 from users import user_dict
-from weatherapi import getCurrentWeather
+from weatherapi import getCurrentWeather, getTomorrowWeather
 
 bot = telebot.TeleBot(Configs.teleboloto)
 
-# todo fix forests
+keyboard_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
+keyboard_main.add('Погоду сейчас', 'Прогноз на неделю').add('Прогноз на завтра')\
+    .add('Что мне сейчас надеть?')
+
 # todo make funcs for weather on tomorrow, hourly adn daily
 # todo make fun for choosing clothes
 # todo add Urets's  wonderful voice answ
-#bot.clear_step_handler_by_chat_id(chat_id=call.message.chat.id)
+
 
 class User:
     def __init__(self):
@@ -153,9 +157,11 @@ def ProcLoc(message):
             return
 
         elif message.location is not None:
-            # todo make it float
-            current_user.lon = message.location.longitude
-            current_user.lat = message.location.latitude
+            current_user.lon = float(message.location.longitude)
+            current_user.lat = float(message.location.latitude)
+            msg = bot.send_message(message.chat.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
+                                   reply_markup=keyboard_main)
+            bot.register_next_step_handler(msg, WeatherConfigs)
             return
         elif message.text == 'Введу название города':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни) или откуда ты там вообще...' \
@@ -177,7 +183,6 @@ def AdvGeoCode(message):
     if current_user is not None:
         if not chek(message, 'oh c\'mon just answer as if you were normal guy', AdvGeoCode, 'text'):
             return
-        current_user = user_dict.get(message.chat.id)
         current_user.city = message.text
         try:
             list_txt = "Выберите Свой город из списка пож:"
@@ -195,10 +200,10 @@ def AdvGeoCode(message):
 @bot.callback_query_handler(func=lambda call: (bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}",
                                                               call.data))) or (call.data == 'Wrong city'))
 def Coords(call):
-    print('why')
     current_user = user_dict.get(call.from_user.id)
     if current_user is not None:
         try:
+            bot.edit_message_reply_markup(call.from_user.id, message_id=call.message.message_id, reply_markup=None)
             if call.data == 'Wrong city':
                 msg = bot.send_message(call.from_user.id, "Ну, попробуй ввести город еще раз))",
                                        reply_markup=types.ReplyKeyboardRemove())
@@ -209,19 +214,16 @@ def Coords(call):
             elif bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}", call.data)):
                 current_user.lon = float(call.data.split(' ')[0])
                 current_user.lat = float(call.data.split(' ')[1])
-                keyboard_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
-                keyboard_main.add('Погоду сейчас').add('Прогноз на неделю').add('Почасовой прогноз на сегодня')
                 msg = bot.send_message(call.from_user.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
                                        reply_markup=keyboard_main)
                 bot.register_next_step_handler(msg, WeatherConfigs)
                 current_user.step = 1
                 print("end")
 
-        except AttributeError as e:
+        except AttributeError:
             if current_user.step == 1:
                 return
             else:
-                print("error")
                 msg = bot.send_message(call.from_user.id, 'Пока не выберешь город из списка ничего не произойдет..')
                 bot.register_next_step_handler(msg, Coords)
                 return
@@ -231,11 +233,15 @@ def Coords(call):
 
 
 def WeatherConfigs(message):
-    print('f')
     current_user = user_dict.get(message.chat.id)
     if current_user is not None:
+        if not chek(message, 'oh c\'mon just answer as if you were normal guy', WeatherConfigs, 'text'):
+            return
         if message.text == 'Погоду сейчас':
             cur_text = getCurrentWeather(current_user.lat, current_user.lon)
+            bot.send_message(message.chat.id, cur_text)
+        elif message.text == 'Прогноз на завтра':
+            cur_text = getTomorrowWeather(current_user.lat, current_user.lon)
             bot.send_message(message.chat.id, cur_text)
     else:
         to_begin(message.chat.id)
@@ -244,5 +250,3 @@ def WeatherConfigs(message):
 bot.enable_save_next_step_handlers(delay=2)
 # bot.load_next_step_handlers()
 bot.polling(none_stop=True)
-
-
