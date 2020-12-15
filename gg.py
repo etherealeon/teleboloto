@@ -11,8 +11,9 @@ from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getCl
 bot = telebot.TeleBot(Configs.teleboloto)
 
 keyboard_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
-keyboard_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю')\
+keyboard_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю') \
     .add('Что надеть cейчас?', 'Что надеть завтра?')
+
 
 # todo make funcs for weather on tomorrow, hourly adn daily
 # todo make fun for choosing clothes
@@ -59,6 +60,16 @@ def to_begin(mci):
               'Как мне тебя называть?'
     msg = bot.send_message(mci, text_oa, reply_markup=types.ReplyKeyboardRemove())
     bot.register_next_step_handler(msg, acquaintanceSex)
+
+
+def common_weather_fun(mci):
+    current_user = user_dict.get(mci)
+    if current_user is not None and current_user.step == 1:
+        return True
+    else:
+        bot.send_message(mci, 'Голубчик, у меня нет твоих данных:(\nПройди, пожалуйста, регистрацию')
+        to_begin(mci.chat.id)
+        return False
 
 
 @bot.message_handler(commands=['start'])
@@ -159,9 +170,9 @@ def ProcLoc(message):
         elif message.location is not None:
             current_user.lon = float(message.location.longitude)
             current_user.lat = float(message.location.latitude)
-            msg = bot.send_message(message.chat.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
-                                   reply_markup=keyboard_main)
-            bot.register_next_step_handler(msg, WeatherConfigs)
+            bot.send_message(message.chat.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
+                             reply_markup=keyboard_main)
+            current_user.step = 1
             return
         elif message.text == 'Введу название города':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни) или откуда ты там вообще...' \
@@ -214,11 +225,9 @@ def Coords(call):
             elif bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}", call.data)):
                 current_user.lon = float(call.data.split(' ')[0])
                 current_user.lat = float(call.data.split(' ')[1])
-                msg = bot.send_message(call.from_user.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
-                                       reply_markup=keyboard_main)
-                bot.register_next_step_handler(msg, WeatherConfigs)
+                bot.send_message(call.from_user.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
+                                 reply_markup=keyboard_main)
                 current_user.step = 1
-                print("end")
 
         except AttributeError:
             if current_user.step == 1:
@@ -232,34 +241,36 @@ def Coords(call):
         return
 
 
-def WeatherConfigs(message):
-    current_user = user_dict.get(message.chat.id)
-    if current_user is not None:
-        if not chek(message, 'oh c\'mon just answer as if you were normal guy', WeatherConfigs, 'text'):
-            return
-        if message.text == 'Погоду сейчас':
-            cur_text = getCurrentWeather(current_user.lat, current_user.lon)
-            msg = bot.send_message(message.chat.id, cur_text)
-            bot.register_next_step_handler(msg, WeatherConfigs)
-        elif message.text == 'Прогноз на завтра':
-            tom_text = getTomorrowWeather(current_user.lat, current_user.lon)
-            msg = bot.send_message(message.chat.id, tom_text)
-            bot.register_next_step_handler(msg, WeatherConfigs)
-        elif message.text == 'Что надеть cейчас?':
-            now_cloth = getClothNow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
-            msg = bot.send_message(message.chat.id, now_cloth)
-            bot.register_next_step_handler(msg, WeatherConfigs)
-        elif message.text == 'Что надеть завтра?':
-            tom_cloth = getClothTomorrow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
-            msg = bot.send_message(message.chat.id, tom_cloth)
-            bot.register_next_step_handler(msg, WeatherConfigs)
-            return
-        else:
-            msg = bot.reply_to(message, 'Ну кнопочками ответь, ну по-братски')
-            bot.register_next_step_handler(msg, WeatherConfigs)
-            return
-    else:
-        to_begin(message.chat.id)
+@bot.message_handler(regexp='Погоду сейчас')
+def weatherNow(message):
+    if common_weather_fun(message.chat.id):
+        current_user = user_dict.get(message.chat.id)
+        cur_text = getCurrentWeather(current_user.lat, current_user.lon)
+        bot.send_message(message.chat.id, cur_text)
+
+
+@bot.message_handler(regexp='Прогноз на завтра')
+def weatherTom(message):
+    if common_weather_fun(message.chat.id):
+        current_user = user_dict.get(message.chat.id)
+        tom_text = getTomorrowWeather(current_user.lat, current_user.lon)
+        bot.send_message(message.chat.id, tom_text)
+
+
+@bot.message_handler(regexp='Что надеть cейчас?')
+def ClothNow(message):
+    if common_weather_fun(message.chat.id):
+        current_user = user_dict.get(message.chat.id)
+        now_cloth = getClothNow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
+        bot.send_message(message.chat.id, now_cloth)
+
+
+@bot.message_handler(regexp='Что надеть завтра?')
+def ClothNow(message):
+    if common_weather_fun(message.chat.id):
+        current_user = user_dict.get(message.chat.id)
+        tom_cloth = getClothTomorrow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
+        bot.send_message(message.chat.id, tom_cloth)
 
 
 bot.enable_save_next_step_handlers(delay=2)
