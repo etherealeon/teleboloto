@@ -18,7 +18,7 @@ def heat_config(heat, temp):
 
 def precipitation_checker(code):
     if ((code >= 200) and (code <= 531)) or ((code >= 611) and (code <= 620)):
-        return '\nТак же возможны осадки. Не забудьте зонт :)'
+        return '\nТакже возможны осадки. Не забудьте зонт :)'
     else:
         return None
 
@@ -62,8 +62,8 @@ def getTomorrowWeather(lat, lon):
     humidity = daily.humidity
     pressure = round(daily.pressure.get('press') * 0.75006375541921)
     clouds = daily.clouds
-    response = f'{cityname}.\nПогода завтра, {date}: {weathercode}.\nТемпература воздуха днем {temperature_day}°, ' \
-               f'ночью - {temperature_night}°\n' \
+    response = f'{cityname}.\nПогода завтра, {date}:\n{weathercode}.\nТемпература воздуха днем: {temperature_day}°, ' \
+               f'ночью: {temperature_night}°\n' \
                f'Ветер {wind_dir}, {wind_speed} м/c. Влажность {humidity}%. \n' \
                f'Давление {pressure} мм рт. ст. Облачность {clouds}%.'
     return response

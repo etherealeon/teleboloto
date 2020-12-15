@@ -6,13 +6,13 @@ from keyboa import keyboa_maker
 from geocode import getCoords
 from loll import Configs
 from users import user_dict
-from weatherapi import getCurrentWeather, getTomorrowWeather
+from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getClothTomorrow
 
 bot = telebot.TeleBot(Configs.teleboloto)
 
 keyboard_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
-keyboard_main.add('Погоду сейчас', 'Прогноз на неделю').add('Прогноз на завтра')\
-    .add('Что мне сейчас надеть?')
+keyboard_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю')\
+    .add('Что надеть cейчас?', 'Что надеть завтра?')
 
 # todo make funcs for weather on tomorrow, hourly adn daily
 # todo make fun for choosing clothes
@@ -239,10 +239,25 @@ def WeatherConfigs(message):
             return
         if message.text == 'Погоду сейчас':
             cur_text = getCurrentWeather(current_user.lat, current_user.lon)
-            bot.send_message(message.chat.id, cur_text)
+            msg = bot.send_message(message.chat.id, cur_text)
+            bot.register_next_step_handler(msg, WeatherConfigs)
         elif message.text == 'Прогноз на завтра':
-            cur_text = getTomorrowWeather(current_user.lat, current_user.lon)
-            bot.send_message(message.chat.id, cur_text)
+            tom_text = getTomorrowWeather(current_user.lat, current_user.lon)
+            msg = bot.send_message(message.chat.id, tom_text)
+            bot.register_next_step_handler(msg, WeatherConfigs)
+        elif message.text == 'Что надеть cейчас?':
+            now_cloth = getClothNow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
+            msg = bot.send_message(message.chat.id, now_cloth)
+            bot.register_next_step_handler(msg, WeatherConfigs)
+        elif message.text == 'Что надеть завтра?':
+            tom_cloth = getClothTomorrow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
+            msg = bot.send_message(message.chat.id, tom_cloth)
+            bot.register_next_step_handler(msg, WeatherConfigs)
+            return
+        else:
+            msg = bot.reply_to(message, 'Ну кнопочками ответь, ну по-братски')
+            bot.register_next_step_handler(msg, WeatherConfigs)
+            return
     else:
         to_begin(message.chat.id)
 
