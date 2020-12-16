@@ -19,7 +19,11 @@ def keyboard_main():
 
 
 # todo add Urets's  wonderful voice answ
-
+# todo one big fun with  next step handlers inside
+# todo deal with geocode somehow:)
+# todo make HI message
+# todo make help message
+# todo choose avatar pic
 
 class User:
     def __init__(self):
