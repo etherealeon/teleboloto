@@ -30,7 +30,6 @@ def call_owm():
     return mgr
 
 
-# C:\Users\я\PycharmProjects\LES2\venv\Lib\site-packages\pyowm\weatherapi25
 def getCurrentWeather(lat, lon):
     my_resp = call_owm().weather_at_coords(lat=lat, lon=lon)
     weather = my_resp.weather
@@ -95,4 +94,3 @@ def getClothTomorrow(lat, lon, sex, heat):
     else:
         answ = clothes(adapted_temp, sex)
     return answ
-

@@ -27,6 +27,5 @@ def getCoords(city):
             address.append(d)
         address.append({'Тут нет нужного города': 'Wrong city'})
         return address
-    # : todo make this exc NOT 2 broad but how.........
-    except Exception as e:
-        return "error"
+    except KeyError as e:
+        return e

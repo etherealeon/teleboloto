@@ -10,13 +10,14 @@ from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getCl
 
 bot = telebot.TeleBot(Configs.teleboloto)
 
-keyboard_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
-keyboard_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю') \
-    .add('Что надеть cейчас?', 'Что надеть завтра?')
+
+def keyboard_main():
+    keyb_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyb_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю') \
+        .add('Что надеть cейчас?', 'Что надеть завтра?')
+    return keyb_main
 
 
-# todo make funcs for weather on tomorrow, hourly adn daily
-# todo make fun for choosing clothes
 # todo add Urets's  wonderful voice answ
 
 
@@ -31,7 +32,6 @@ class User:
         self.rain = None
         self.car = None
         self.running = False
-        self.step = 0
 
 
 def add_user(mci):
@@ -64,7 +64,7 @@ def to_begin(mci):
 
 def common_weather_fun(mci):
     current_user = user_dict.get(mci)
-    if current_user is not None and current_user.step == 1:
+    if current_user is not None and current_user.running is False:
         return True
     else:
         bot.send_message(mci, 'Голубчик, у меня нет твоих данных:(\nПройди, пожалуйста, регистрацию')
@@ -171,8 +171,9 @@ def ProcLoc(message):
             current_user.lon = float(message.location.longitude)
             current_user.lat = float(message.location.latitude)
             bot.send_message(message.chat.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
-                             reply_markup=keyboard_main)
-            current_user.step = 1
+                             reply_markup=keyboard_main())
+            current_user.running = False
+            bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
             return
         elif message.text == 'Введу название города':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни) или откуда ты там вообще...' \
@@ -219,23 +220,21 @@ def Coords(call):
                 msg = bot.send_message(call.from_user.id, "Ну, попробуй ввести город еще раз))",
                                        reply_markup=types.ReplyKeyboardRemove())
                 bot.register_next_step_handler(msg, AdvGeoCode)
-                current_user.step = 1
                 return
 
             elif bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}", call.data)):
                 current_user.lon = float(call.data.split(' ')[0])
                 current_user.lat = float(call.data.split(' ')[1])
                 bot.send_message(call.from_user.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
-                                 reply_markup=keyboard_main)
-                current_user.step = 1
+                                 reply_markup=keyboard_main())
+                current_user.running = False
+                bot.clear_step_handler_by_chat_id(chat_id=call.from_user.id)
+                return
 
         except AttributeError:
-            if current_user.step == 1:
-                return
-            else:
-                msg = bot.send_message(call.from_user.id, 'Пока не выберешь город из списка ничего не произойдет..')
-                bot.register_next_step_handler(msg, Coords)
-                return
+            msg = bot.send_message(call.from_user.id, 'Пока не выберешь город из списка ничего не произойдет..')
+            bot.register_next_step_handler(msg, Coords)
+            return
     else:
         to_begin(call.from_user.id)
         return
@@ -266,13 +265,14 @@ def ClothNow(message):
 
 
 @bot.message_handler(regexp='Что надеть завтра?')
-def ClothNow(message):
+def ClothTom(message):
     if common_weather_fun(message.chat.id):
         current_user = user_dict.get(message.chat.id)
         tom_cloth = getClothTomorrow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
         bot.send_message(message.chat.id, tom_cloth)
 
 
-bot.enable_save_next_step_handlers(delay=2)
-# bot.load_next_step_handlers()
-bot.polling(none_stop=True)
+if __name__ == '__main__':
+    bot.enable_save_next_step_handlers(delay=2)
+    # bot.load_next_step_handlers()
+    bot.polling(none_stop=True)
