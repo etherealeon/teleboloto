@@ -2,7 +2,6 @@ import requests
 from loll import Configs
 
 
-# "hydro" "area" "airport" "railway_station" "district" "street"
 def getCoords(city):
     PARAMS = {
         "apikey": Configs.yan,
@@ -24,17 +23,14 @@ def getCoords(city):
         for i in range(0, num_places):
             kind = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"
                 ]['metaDataProperty']['GeocoderMetaData']['kind']
-            if kind != 'hydro':
-                place_text = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"
-                ]["metaDataProperty"]["GeocoderMetaData"]["AddressDetails"]["Country"]["AddressLine"]
-
+            if kind == 'locality':
+                place_name = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["name"]
+                place_d = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["description"]
                 loc = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["Point"]["pos"]
-                d = {place_text: loc}
+                d = {place_name + ', '+ place_d: loc}
                 address.append(d)
         address.append({'Тут нет нужного города': 'Wrong city'})
         return address
     except KeyError as e:
         return e
 
-
-print(getCoords('Кисегач'))

@@ -18,12 +18,18 @@ def keyboard_main():
     return keyb_main
 
 
+def keyboard_sex():
+    keyb_sex = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    keyb_sex.add('Женский').add('Мужской').add('Я небинарное чудо')
+    return keyb_sex
+
 # todo add Urets's  wonderful voice answ
 # todo one big fun with  next step handlers inside
 # todo deal with geocode somehow:)
 # todo make HI message
 # todo make help message
 # todo choose avatar pic
+
 
 class User:
     def __init__(self):
@@ -46,7 +52,7 @@ def add_user(mci):
 
 def chek(message, txt, next_f, *cont_types):
     if message.content_type == 'text' and message.text == '/start':
-        to_begin(message.chat.id)
+        to_begin(message.chat.id, message.from_user.first_name)
         return
     for cont_type in cont_types:
         if message.content_type == cont_type:
@@ -57,22 +63,24 @@ def chek(message, txt, next_f, *cont_types):
     return False
 
 
-def to_begin(mci):
+def to_begin(mci, name):
     add_user(mci)
     bot.clear_step_handler_by_chat_id(chat_id=mci)
-    text_oa = 'Кажется, данные о тебе не сохранились.\nПожалуйста, пройди регистрацию заново\n' \
-              'Как мне тебя называть?'
-    msg = bot.send_message(mci, text_oa, reply_markup=types.ReplyKeyboardRemove())
-    bot.register_next_step_handler(msg, acquaintanceSex)
+    current_user = user_dict.get(mci)
+    current_user.name = name
+    text_oa = f'{name},кажется, данные о тебе не сохранились.\nПознакомимся еще разОчек?)' \
+              f' Укажите, пожалуйста, Ваш пол(sex)'
+    msg = bot.send_message(mci, text_oa, reply_markup=keyboard_sex())
+    bot.register_next_step_handler(msg, acquaintanceHeat)
 
 
-def common_weather_fun(mci):
+def common_weather_fun(mci, name):
     current_user = user_dict.get(mci)
     if current_user is not None and current_user.running is False:
         return True
     else:
         bot.send_message(mci, 'Голубчик, у меня нет твоих данных:(\nПройди, пожалуйста, регистрацию')
-        to_begin(mci.chat.id)
+        to_begin(mci, name)
         return False
 
 
@@ -80,29 +88,14 @@ def common_weather_fun(mci):
 def start_message(message):
     add_user(message.chat.id)
     current_user = user_dict.get(message.chat.id)
+    current_user.name = message.from_user.first_name
+    if current_user.name is None:
+        current_user.name = 'мое чудо'
     if not current_user.running:
         current_user.running = True
-        text_hi = "Привет!\nЯ бот, давай знакомиться!\nКак мне тебя называть?"
-        msg = bot.reply_to(message, text_hi, reply_markup=types.ReplyKeyboardRemove())
-        bot.register_next_step_handler(msg, acquaintanceSex)
-
-
-def acquaintanceSex(message):
-    # todo добавить проверку на количество символов и сделаит словарь тупых шуток для ответа если что-то не так
-    current_user = user_dict.get(message.chat.id)
-    if current_user is not None:
-        if not chek(message, 'wow buddy dat s pretty cool but I need ur NAME', acquaintanceSex, 'text'):
-            return
-
-        current_user = user_dict.get(message.chat.id)
-        current_user.name = message.text
-        keyboard_sex = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        keyboard_sex.add('Женский').add('Мужской').add('Я небинарное чудо')
-        text_sex = "Принято, %s\nУкажите, пожалуйста, Ваш пол(sex)" % current_user.name
-        msg = bot.reply_to(message, text_sex, reply_markup=keyboard_sex)
+        text_hi = f"Здравствуй, {current_user.name}!\nЯ бот, давай знакомиться!\nУкажите, пожалуйста, Ваш пол(sex)"
+        msg = bot.reply_to(message, text_hi, reply_markup=keyboard_sex())
         bot.register_next_step_handler(msg, acquaintanceHeat)
-    else:
-        to_begin(message.chat.id)
 
 
 def acquaintanceHeat(message):
@@ -136,7 +129,7 @@ def acquaintanceHeat(message):
             bot.register_next_step_handler(msg, acquaintanceLoc)
             return
     else:
-        to_begin(message.chat.id)
+        to_begin(message.chat.id, message.from_user.first_name)
 
 
 def acquaintanceLoc(message):
@@ -162,7 +155,7 @@ def acquaintanceLoc(message):
             bot.register_next_step_handler(msg, acquaintanceLoc)
             return
     else:
-        to_begin(message.chat.id)
+        to_begin(message.chat.id, message.from_user.first_name)
 
 
 def ProcLoc(message):
@@ -191,7 +184,7 @@ def ProcLoc(message):
             bot.register_next_step_handler(msg, ProcLoc)
             return
     else:
-        to_begin(message.chat.id)
+        to_begin(message.chat.id, message.from_user.first_name)
 
 
 def AdvGeoCode(message):
@@ -210,7 +203,7 @@ def AdvGeoCode(message):
             msg = bot.reply_to(message, no_city_txt, reply_markup=types.ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, AdvGeoCode)
     else:
-        to_begin(message.chat.id)
+        to_begin(message.chat.id, message.from_user.first_name)
 
 
 @bot.callback_query_handler(func=lambda call: (bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}",
@@ -240,13 +233,13 @@ def Coords(call):
             bot.register_next_step_handler(msg, Coords)
             return
     else:
-        to_begin(call.from_user.id)
+        to_begin(call.from_user.id, call.from_user.first_name)
         return
 
 
 @bot.message_handler(regexp='Погоду сейчас')
 def weatherNow(message):
-    if common_weather_fun(message.chat.id):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
         current_user = user_dict.get(message.chat.id)
         cur_text = getCurrentWeather(current_user.lat, current_user.lon)
         bot.send_message(message.chat.id, cur_text)
@@ -254,7 +247,7 @@ def weatherNow(message):
 
 @bot.message_handler(regexp='Прогноз на завтра')
 def weatherTom(message):
-    if common_weather_fun(message.chat.id):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
         current_user = user_dict.get(message.chat.id)
         tom_text = getTomorrowWeather(current_user.lat, current_user.lon)
         bot.send_message(message.chat.id, tom_text)
@@ -262,7 +255,7 @@ def weatherTom(message):
 
 @bot.message_handler(regexp='Что надеть cейчас?')
 def ClothNow(message):
-    if common_weather_fun(message.chat.id):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
         current_user = user_dict.get(message.chat.id)
         now_cloth = getClothNow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
         bot.send_message(message.chat.id, now_cloth)
@@ -270,7 +263,7 @@ def ClothNow(message):
 
 @bot.message_handler(regexp='Что надеть завтра?')
 def ClothTom(message):
-    if common_weather_fun(message.chat.id):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
         current_user = user_dict.get(message.chat.id)
         tom_cloth = getClothTomorrow(current_user.lat, current_user.lon, current_user.sex, current_user.heat)
         bot.send_message(message.chat.id, tom_cloth)
