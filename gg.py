@@ -13,9 +13,8 @@ bot = telebot.TeleBot(Configs.teleboloto)
 
 def keyboard_main():
     keyb_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    keyb_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю') \
-        .add('Что надеть cейчас?', 'Что надеть завтра?').add('Когда пойти гулять?').add('Назад к выбору города'
-                                                                                        u"\U000021A9")
+    keyb_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю', 'Когда пойти гулять?') \
+        .add('Что надеть cейчас?', 'Что надеть завтра?').add('Назад к выбору города'u"\U000021A9")
     return keyb_main
 
 
@@ -59,7 +58,7 @@ def chek(message, txt, next_f, *cont_types):
         if message.content_type == cont_type:
             return True
 
-    msg = bot.reply_to(message, txt)
+    msg = bot.send_message(message.chat.id, txt)
     bot.register_next_step_handler(msg, next_f)
     return False
 
@@ -95,7 +94,7 @@ def start_message(message):
     if not current_user.running:
         current_user.running = True
         text_hi = f"Здравствуй, {current_user.name}!\nЯ бот, давай знакомиться!\nУкажите, пожалуйста, Ваш пол"
-        msg = bot.reply_to(message, text_hi, reply_markup=keyboard_sex())
+        msg = bot.send_message(message.chat.id, text_hi, reply_markup=keyboard_sex())
         bot.register_next_step_handler(msg, acquaintanceHeat)
 
 
@@ -112,7 +111,7 @@ def acquaintanceHeat(message):
             text_sex2 = 'ЧТОШ....Ну а юбки и платья вы носите?'
             keyboard_yn = types.ReplyKeyboardMarkup(resize_keyboard=True)
             keyboard_yn.add("Дa", "Hет")
-            msg = bot.reply_to(message, text_sex2, reply_markup=keyboard_yn)
+            msg = bot.send_message(message.chat.id, text_sex2, reply_markup=keyboard_yn)
             bot.register_next_step_handler(msg, acquaintanceHeat)
             return
 
@@ -127,7 +126,7 @@ def acquaintanceHeat(message):
         if (current_user.sex == 'Женский') or (current_user.sex == 'Мужской'):
             keyboard_heat = types.ReplyKeyboardMarkup(resize_keyboard=True)
             keyboard_heat.add('Я мерзляч').add('Я горяч').add('Чё? Я норм.')
-            msg = bot.reply_to(message, "Хорошо.\nНу тут одно из ТРЁХ", reply_markup=keyboard_heat)
+            msg = bot.send_message(message.chat.id, "Хорошо.\nНу тут одно из ТРЁХ", reply_markup=keyboard_heat)
             bot.register_next_step_handler(msg, acquaintanceLoc)
             return
     else:
@@ -150,11 +149,11 @@ def acquaintanceLoc(message):
             keyboard_loc = types.ReplyKeyboardMarkup(resize_keyboard=True)
             key_loc = types.KeyboardButton(text='Отправить геолокацию', request_location=True)
             keyboard_loc.add(key_loc).add('Введу название')
-            msg = bot.reply_to(message, text_loc, reply_markup=keyboard_loc)
+            msg = bot.send_message(message.chat.id, text_loc, reply_markup=keyboard_loc)
             bot.register_next_step_handler(msg, ProcLoc)
             return
         else:
-            msg = bot.reply_to(message, 'Ну кнопочками ответь, ну по-братски')
+            msg = bot.send_message(message.chat.id, 'Ну кнопочками ответь, ну по-братски')
             bot.register_next_step_handler(msg, acquaintanceLoc)
             return
     else:
@@ -178,12 +177,12 @@ def ProcLoc(message):
         elif message.text == 'Введу название':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни) или откуда ты там вообще...' \
                   '\nНапример,\nМосква'
-            msg = bot.reply_to(message, txt, reply_markup=None)
+            msg = bot.send_message(message.chat.id, txt, reply_markup=types.ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, AdvGeoCode)
             return
 
         else:
-            msg = bot.reply_to(message, 'Ну кнопочками ответь, ну по-братски')
+            msg = bot.send_message(message.chat.id, 'Ну кнопочками ответь, ну по-братски')
             bot.register_next_step_handler(msg, ProcLoc)
             return
     else:
@@ -200,11 +199,11 @@ def AdvGeoCode(message):
             list_txt = "Выберите Свой город из списка пож:"
             list_cities = keyboa_maker(items=getCoords(current_user.city))
             current_user.step = 0
-            msg = bot.reply_to(message, list_txt, reply_markup=list_cities)
+            msg = bot.send_message(message.chat.id, list_txt, reply_markup=list_cities)
             bot.register_next_step_handler(msg, Coords)
         except ValueError:
             no_city_txt = 'Похоже, я не могу найти ТАКОЕ \nПопробуй по-другому пож'
-            msg = bot.reply_to(message, no_city_txt, reply_markup=types.ReplyKeyboardRemove())
+            msg = bot.send_message(message.chat.id, no_city_txt, reply_markup=types.ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, AdvGeoCode)
     else:
         to_begin(message.chat.id, message.from_user.first_name)
@@ -313,4 +312,7 @@ if __name__ == '__main__':
     while 1:
         bot.enable_save_next_step_handlers(delay=2)
         # bot.load_next_step_handlers()
-        bot.polling(none_stop=True)
+        try:
+            bot.polling(none_stop=True)
+        except ConnectionError:
+            pass
