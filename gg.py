@@ -6,7 +6,7 @@ from keyboa import keyboa_maker
 from geocode import getCoords
 from loll import Configs
 from users import user_dict
-from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getClothTomorrow
+from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getClothTomorrow, bestDay
 
 bot = telebot.TeleBot(Configs.teleboloto)
 
@@ -14,7 +14,7 @@ bot = telebot.TeleBot(Configs.teleboloto)
 def keyboard_main():
     keyb_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyb_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю') \
-        .add('Что надеть cейчас?', 'Что надеть завтра?')
+        .add('Что надеть cейчас?', 'Что надеть завтра?').add('Когда пойти гулять?')
     return keyb_main
 
 
@@ -23,9 +23,8 @@ def keyboard_sex():
     keyb_sex.add('Женский').add('Мужской').add('Я небинарное чудо')
     return keyb_sex
 
+
 # todo add Urets's  wonderful voice answ
-# todo one big fun with  next step handlers inside
-# todo deal with geocode somehow:)
 # todo make HI message
 # todo make help message
 # todo choose avatar pic
@@ -146,7 +145,7 @@ def acquaintanceLoc(message):
             text_loc = "ПРЕВОСХОДНО! А погода тебе где нужна?"
             keyboard_loc = types.ReplyKeyboardMarkup(resize_keyboard=True)
             key_loc = types.KeyboardButton(text='Отправить геолокацию', request_location=True)
-            keyboard_loc.add(key_loc).add('Введу название города')
+            keyboard_loc.add(key_loc).add('Введу название')
             msg = bot.reply_to(message, text_loc, reply_markup=keyboard_loc)
             bot.register_next_step_handler(msg, ProcLoc)
             return
@@ -172,7 +171,7 @@ def ProcLoc(message):
             current_user.running = False
             bot.clear_step_handler_by_chat_id(chat_id=message.chat.id)
             return
-        elif message.text == 'Введу название города':
+        elif message.text == 'Введу название':
             txt = 'Хорошо.\nНапиши, пожалуйста, название своего города(села, деревни) или откуда ты там вообще...' \
                   '\nНапример,\nМосква'
             msg = bot.reply_to(message, txt, reply_markup=None)
@@ -199,27 +198,29 @@ def AdvGeoCode(message):
             msg = bot.reply_to(message, list_txt, reply_markup=list_cities)
             bot.register_next_step_handler(msg, Coords)
         except ValueError:
-            no_city_txt = 'Похоже, я не могу найти такой город\nПопробуй по-другому пож'
+            no_city_txt = 'Похоже, я не могу найти ТАКОЕ \nПопробуй по-другому пож'
             msg = bot.reply_to(message, no_city_txt, reply_markup=types.ReplyKeyboardRemove())
             bot.register_next_step_handler(msg, AdvGeoCode)
     else:
         to_begin(message.chat.id, message.from_user.first_name)
 
 
-@bot.callback_query_handler(func=lambda call: (bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}",
+@bot.callback_query_handler(func=lambda call: (bool(re.search(r".*\d+[.]\d{4,6}\s.*\d+[.]\d{4,6}",
                                                               call.data))) or (call.data == 'Wrong city'))
 def Coords(call):
+    print('blya')
     current_user = user_dict.get(call.from_user.id)
     if current_user is not None:
         try:
             bot.edit_message_reply_markup(call.from_user.id, message_id=call.message.message_id, reply_markup=None)
             if call.data == 'Wrong city':
-                msg = bot.send_message(call.from_user.id, "Ну, попробуй ввести город еще раз))",
+                msg = bot.send_message(call.from_user.id, "Ну, попробуй ввести еще раз)))))))))\n"
+                                                          "может, по-другому как-то))",
                                        reply_markup=types.ReplyKeyboardRemove())
                 bot.register_next_step_handler(msg, AdvGeoCode)
                 return
 
-            elif bool(re.search(r"\d\d[.]\d{6}\s\d\d[.]\d{6}", call.data)):
+            elif bool(re.search(r".*\d+[.]\d{4,6}\s.*\d+[.]\d{4,6}", call.data)):
                 current_user.lon = float(call.data.split(' ')[0])
                 current_user.lat = float(call.data.split(' ')[1])
                 bot.send_message(call.from_user.id, "Ура!\nВот и познакомились.\nТеперь выбери,чего же ты хочешь",
@@ -228,8 +229,9 @@ def Coords(call):
                 bot.clear_step_handler_by_chat_id(chat_id=call.from_user.id)
                 return
 
-        except AttributeError:
-            msg = bot.send_message(call.from_user.id, 'Пока не выберешь город из списка ничего не произойдет..')
+        except AttributeError as e:
+            print(e)
+            msg = bot.send_message(call.from_user.id, 'Пока не выберешь что-то из списка выше ничего не произойдет..')
             bot.register_next_step_handler(msg, Coords)
             return
     else:
@@ -269,7 +271,22 @@ def ClothTom(message):
         bot.send_message(message.chat.id, tom_cloth)
 
 
+@bot.message_handler(regexp='Когда пойти гулять?')
+def weatherNow(message):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
+        current_user = user_dict.get(message.chat.id)
+        cur_text = bestDay(current_user.lat, current_user.lon)
+        bot.send_message(message.chat.id, cur_text)
+
+
+@bot.message_handler(content_types=['text'])
+def all_message(message):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
+        bot.send_message(message.chat.id, 'Я тебя не понимайт')
+
+
 if __name__ == '__main__':
-    bot.enable_save_next_step_handlers(delay=2)
-    # bot.load_next_step_handlers()
-    bot.polling(none_stop=True)
+    while 1:
+        bot.enable_save_next_step_handlers(delay=2)
+        # bot.load_next_step_handlers()
+        bot.polling(none_stop=True)

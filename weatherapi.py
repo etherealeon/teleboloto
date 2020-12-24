@@ -18,9 +18,9 @@ def heat_config(heat, temp):
 
 def precipitation_checker(code):
     if ((code >= 200) and (code <= 531)) or ((code >= 611) and (code <= 620)):
-        return '\nТакже возможны осадки. Не забудьте зонт :)'
+        return True
     else:
-        return None
+        return False
 
 
 def call_owm():
@@ -73,10 +73,9 @@ def getClothNow(lat, lon, sex, heat):
     temp = round(my_resp.weather.temperature('celsius').get('feels_like'))
     weather_code = my_resp.weather.weather_code
     adapted_temp = heat_config(heat, temp)
-    precipitation = precipitation_checker(weather_code)
 
-    if precipitation is not None:
-        answ = clothes(adapted_temp, sex) + precipitation
+    if precipitation_checker(weather_code):
+        answ = clothes(adapted_temp, sex) + '\nТакже возможны осадки. Не забудьте зонт :)'
     else:
         answ = clothes(adapted_temp, sex)
     return answ
@@ -88,9 +87,85 @@ def getClothTomorrow(lat, lon, sex, heat):
     temp = round(daily.temperature().get('feels_like_day'))
     adapted_temp = heat_config(heat, temp)
     weather_code = daily.weather_code
-    precipitation = precipitation_checker(weather_code)
-    if precipitation is not None:
-        answ = clothes(adapted_temp, sex) + precipitation
+
+    if precipitation_checker(weather_code):
+        answ = clothes(adapted_temp, sex) + '\nТакже возможны осадки. Не забудьте зонт :)'
     else:
         answ = clothes(adapted_temp, sex)
     return answ
+
+
+def hotOrCold(days, one_call):
+    summ = 0
+    for i in days:
+        temp = one_call.forecast_daily[i].temperature().get('feels_like_day')
+        summ += temp
+    avg = summ / len(days)
+    if avg > 23:
+        return True
+    else:
+        return False
+
+
+def getDayMin(days, one_call):
+    print('there', days)
+    mini = 80
+    for i in days:
+        fld = one_call.forecast_daily[i].temperature().get('feels_like_day')
+        if fld < mini:
+            mini = fld
+            print(mini)
+            day = i -1
+    return day
+
+
+def getDayMax(days, one_call):
+    maxi = -80
+    for i in days:
+        fld = one_call.forecast_daily[i].temperature().get('feels_like_day')
+        if fld > maxi:
+            maxi = fld
+            print(maxi)
+            day = i -1
+    return day
+
+
+def bestDay(lat, lon):
+    days = [1, 2, 3, 4, 5, 6]
+    one_call = call_owm().one_call(lat=lat, lon=lon, exclude='minutely,hourly', units='metric')
+    for i in days:
+        weather_code = one_call.forecast_daily[i].weather_code
+        if precipitation_checker(weather_code):
+            days.remove(i)
+    if len(days) == 1:
+        daily = one_call.forecast_daily[days[0]]
+        date = datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m')
+        return f'Наилучший день для прогулки: {date}.\nОсадков не ожидается.'
+    elif len(days) == 0:
+        days = [1, 2, 3, 4, 5, 6]
+        if hotOrCold(days, one_call):
+            day = getDayMin(days, one_call)
+            daily = one_call.forecast_daily[days[day]]
+            date = datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m')
+            f'Наилучший день для прогулки: {date}.\n Но в этот день ожидаются осадки, возьмите зонт)'
+        else:
+            day = getDayMax(days, one_call)
+            daily = one_call.forecast_daily[days[day]]
+            date = datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m')
+            f'Наилучший день для прогулки: {date}.\n Но в этот день ожидаются осадки, возьмите зонт)'
+
+    else:
+        print('ax', len(days))
+        print('here' ,days)
+        if hotOrCold(days, one_call):
+            day = getDayMin(days, one_call)
+            daily = one_call.forecast_daily[days[day]]
+            date = datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m')
+            return f'Наилучший день для прогулки: {date}.\nОсадков не ожидается.'
+        else:
+            day = getDayMax(days, one_call)
+            daily = one_call.forecast_daily[days[day]]
+            date = datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m')
+            return f'Наилучший день для прогулки: {date}.\nОсадков не ожидается.'
+
+

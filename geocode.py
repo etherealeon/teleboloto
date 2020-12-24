@@ -11,7 +11,6 @@ def getCoords(city):
         "geocode": city
     }
     try:
-        # todo restrict sending rivers forests ect
         r = requests.get(url="https://geocode-maps.yandex.ru/1.x/", params=PARAMS)
         json_data = r.json()
         results = int(json_data["response"]["GeoObjectCollection"]["metaDataProperty"]["GeocoderResponseMetaData"]
@@ -23,7 +22,7 @@ def getCoords(city):
         for i in range(0, num_places):
             kind = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"
                 ]['metaDataProperty']['GeocoderMetaData']['kind']
-            if kind == 'locality':
+            if kind == 'locality' or kind == "province" or kind == "district" or kind == "area":
                 place_name = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["name"]
                 place_d = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["description"]
                 loc = json_data["response"]["GeoObjectCollection"]["featureMember"][i]["GeoObject"]["Point"]["pos"]
