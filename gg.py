@@ -14,7 +14,8 @@ bot = telebot.TeleBot(Configs.teleboloto)
 def keyboard_main():
     keyb_main = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyb_main.add('Погоду сейчас', 'Прогноз на завтра').add('Прогноз на неделю') \
-        .add('Что надеть cейчас?', 'Что надеть завтра?').add('Когда пойти гулять?')
+        .add('Что надеть cейчас?', 'Что надеть завтра?').add('Когда пойти гулять?').add('Назад к выбору города'
+                                                                                        u"\U000021A9")
     return keyb_main
 
 
@@ -38,6 +39,7 @@ class User:
         self.lat = ''
         self.lon = ''
         self.city = ''
+        self.step = 0
         self.rain = None
         self.car = None
         self.running = False
@@ -92,7 +94,7 @@ def start_message(message):
         current_user.name = 'мое чудо'
     if not current_user.running:
         current_user.running = True
-        text_hi = f"Здравствуй, {current_user.name}!\nЯ бот, давай знакомиться!\nУкажите, пожалуйста, Ваш пол(sex)"
+        text_hi = f"Здравствуй, {current_user.name}!\nЯ бот, давай знакомиться!\nУкажите, пожалуйста, Ваш пол"
         msg = bot.reply_to(message, text_hi, reply_markup=keyboard_sex())
         bot.register_next_step_handler(msg, acquaintanceHeat)
 
@@ -106,7 +108,8 @@ def acquaintanceHeat(message):
         if (sex == 'Женский') or (sex == 'Мужской'):
             current_user.sex = sex
         elif sex == 'Я небинарное чудо':
-            text_sex2 = 'В семье не без урода. ЧТОШ....Ну а юбки и платья вы носите?'
+            # В семье не без урода.
+            text_sex2 = 'ЧТОШ....Ну а юбки и платья вы носите?'
             keyboard_yn = types.ReplyKeyboardMarkup(resize_keyboard=True)
             keyboard_yn.add("Дa", "Hет")
             msg = bot.reply_to(message, text_sex2, reply_markup=keyboard_yn)
@@ -118,12 +121,12 @@ def acquaintanceHeat(message):
             if sex == "Нет":
                 current_user.sex = 'Мужской'
         else:
-            msg = bot.reply_to(message, 'Пол введи дебил\n КНОПАЧКАМИ')
+            msg = bot.reply_to(message, 'Пол введи,чудо мое\n КНОПАЧКАМИ')
             bot.register_next_step_handler(msg, acquaintanceHeat)
 
         if (current_user.sex == 'Женский') or (current_user.sex == 'Мужской'):
             keyboard_heat = types.ReplyKeyboardMarkup(resize_keyboard=True)
-            keyboard_heat.add('Я мезляч').add('Я горяч').add('Чё? Я норм.')
+            keyboard_heat.add('Я мерзляч').add('Я горяч').add('Чё? Я норм.')
             msg = bot.reply_to(message, "Хорошо.\nНу тут одно из ТРЁХ", reply_markup=keyboard_heat)
             bot.register_next_step_handler(msg, acquaintanceLoc)
             return
@@ -137,11 +140,12 @@ def acquaintanceLoc(message):
         if not chek(message, 'oh c\'mon just answer as if you were normal guy', acquaintanceLoc, 'text'):
             return
 
-        if message.text == 'Я мезляч' or 'Я горяч' == message.text or 'Чё? Я норм.' == message.text:
+        if message.text == 'Я мерзляч' or 'Я горяч' == message.text or 'Чё? Я норм.' == message.text:
             if message.text == 'Я горяч':
                 current_user.heat = 1
-            if message.text == 'Я горяч':
+            if message.text == 'Я мерзляч':
                 current_user.heat = -1
+            #ХУЙ
             text_loc = "ПРЕВОСХОДНО! А погода тебе где нужна?"
             keyboard_loc = types.ReplyKeyboardMarkup(resize_keyboard=True)
             key_loc = types.KeyboardButton(text='Отправить геолокацию', request_location=True)
@@ -195,6 +199,7 @@ def AdvGeoCode(message):
         try:
             list_txt = "Выберите Свой город из списка пож:"
             list_cities = keyboa_maker(items=getCoords(current_user.city))
+            current_user.step = 0
             msg = bot.reply_to(message, list_txt, reply_markup=list_cities)
             bot.register_next_step_handler(msg, Coords)
         except ValueError:
@@ -208,12 +213,12 @@ def AdvGeoCode(message):
 @bot.callback_query_handler(func=lambda call: (bool(re.search(r".*\d+[.]\d{4,6}\s.*\d+[.]\d{4,6}",
                                                               call.data))) or (call.data == 'Wrong city'))
 def Coords(call):
-    print('blya')
     current_user = user_dict.get(call.from_user.id)
     if current_user is not None:
         try:
             bot.edit_message_reply_markup(call.from_user.id, message_id=call.message.message_id, reply_markup=None)
             if call.data == 'Wrong city':
+                current_user.step = 1
                 msg = bot.send_message(call.from_user.id, "Ну, попробуй ввести еще раз)))))))))\n"
                                                           "может, по-другому как-то))",
                                        reply_markup=types.ReplyKeyboardRemove())
@@ -229,10 +234,13 @@ def Coords(call):
                 bot.clear_step_handler_by_chat_id(chat_id=call.from_user.id)
                 return
 
-        except AttributeError as e:
-            print(e)
-            msg = bot.send_message(call.from_user.id, 'Пока не выберешь что-то из списка выше ничего не произойдет..')
-            bot.register_next_step_handler(msg, Coords)
+        except AttributeError:
+            if current_user.step == 1:
+                pass
+            else:
+                msg = bot.send_message(call.from_user.id, 'Пока не выберешь что-то из списка'
+                                                          ' выше ничего не произойдет..')
+                bot.register_next_step_handler(msg, Coords)
             return
     else:
         to_begin(call.from_user.id, call.from_user.first_name)
@@ -287,7 +295,15 @@ def weatherNow(message):
         bot.send_message(message.chat.id, cur_text)
 
 
-@bot.message_handler(content_types=['text'])
+@bot.message_handler(regexp='Назад к выбору города'u"\U000021A9")
+def weatherNow(message):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
+        msg = bot.send_message(message.chat.id, 'Вводи свое село))')
+        bot.register_next_step_handler(msg, AdvGeoCode)
+        return
+
+
+@bot.message_handler(content_types=['text', 'audio', 'video', 'photo', 'document', 'sticker', 'voice'])
 def all_message(message):
     if common_weather_fun(message.chat.id, message.from_user.first_name):
         bot.send_message(message.chat.id, 'Я тебя не понимайт')
