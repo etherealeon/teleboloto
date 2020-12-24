@@ -68,6 +68,24 @@ def getTomorrowWeather(lat, lon):
     return response
 
 
+def WeekForecast(lat, lon):
+    cityname = call_owm().weather_at_coords(lat=lat, lon=lon).location.name
+    one_call = call_owm().one_call(lat=lat, lon=lon, exclude='minutely,hourly', units='metric')
+    a = {}
+    for i in range(1, 8):
+        daily = one_call.forecast_daily[i]
+        date = (datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m'))
+        weathercode = (clds.get(daily.weather_code))
+        day = (round(daily.temperature().get('day')))
+        night = (round(daily.temperature().get('night')))
+        eve = (round(daily.temperature().get('eve')))
+        morn = (round(daily.temperature().get('morn')))
+        a[i] = f'{date}\n{weathercode}.\nУтром {morn}°,\t\tДнём {day}°,\t\tВечером{eve}°,' \
+               f'\t\tНочью {night}°\n'
+    responce = f'{cityname}. Погода на неделю.\n{a[1]}{a[2]}{a[3]}{a[4]}{a[5]}{a[6]}{a[7]}'
+    return responce
+
+
 def getClothNow(lat, lon, sex, heat):
     my_resp = call_owm().weather_at_coords(lat=lat, lon=lon)
     temp = round(my_resp.weather.temperature('celsius').get('feels_like'))
@@ -108,13 +126,11 @@ def hotOrCold(days, one_call):
 
 
 def getDayMin(days, one_call):
-    print('there', days)
     mini = 80
     for i in days:
         fld = one_call.forecast_daily[i].temperature().get('feels_like_day')
         if fld < mini:
             mini = fld
-            print(mini)
             day = i -1
     return day
 
@@ -125,7 +141,6 @@ def getDayMax(days, one_call):
         fld = one_call.forecast_daily[i].temperature().get('feels_like_day')
         if fld > maxi:
             maxi = fld
-            print(maxi)
             day = i -1
     return day
 
@@ -155,8 +170,6 @@ def bestDay(lat, lon):
             f'Наилучший день для прогулки: {date}.\n Но в этот день ожидаются осадки, возьмите зонт)'
 
     else:
-        print('ax', len(days))
-        print('here' ,days)
         if hotOrCold(days, one_call):
             day = getDayMin(days, one_call)
             daily = one_call.forecast_daily[days[day]]
@@ -167,5 +180,3 @@ def bestDay(lat, lon):
             daily = one_call.forecast_daily[days[day]]
             date = datetime.datetime.fromtimestamp(daily.ref_time).strftime('%d.%m')
             return f'Наилучший день для прогулки: {date}.\nОсадков не ожидается.'
-
-

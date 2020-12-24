@@ -6,7 +6,7 @@ from keyboa import keyboa_maker
 from geocode import getCoords
 from loll import Configs
 from users import user_dict
-from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getClothTomorrow, bestDay
+from weatherapi import getCurrentWeather, getTomorrowWeather, getClothNow, getClothTomorrow, bestDay ,WeekForecast
 
 bot = telebot.TeleBot(Configs.teleboloto)
 
@@ -276,6 +276,14 @@ def weatherNow(message):
     if common_weather_fun(message.chat.id, message.from_user.first_name):
         current_user = user_dict.get(message.chat.id)
         cur_text = bestDay(current_user.lat, current_user.lon)
+        bot.send_message(message.chat.id, cur_text)
+
+
+@bot.message_handler(regexp='Прогноз на неделю')
+def weatherNow(message):
+    if common_weather_fun(message.chat.id, message.from_user.first_name):
+        current_user = user_dict.get(message.chat.id)
+        cur_text = WeekForecast(current_user.lat, current_user.lon)
         bot.send_message(message.chat.id, cur_text)
 
 
