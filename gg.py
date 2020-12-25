@@ -69,7 +69,7 @@ def to_begin(mci, name):
     current_user = user_dict.get(mci)
     current_user.name = name
     text_oa = f'{name},кажется, данные о тебе не сохранились.\nПознакомимся еще разОчек?)' \
-              f' Укажите, пожалуйста, Ваш пол(sex)'
+              f' Укажите, пожалуйста, Ваш пол'
     msg = bot.send_message(mci, text_oa, reply_markup=keyboard_sex())
     bot.register_next_step_handler(msg, acquaintanceHeat)
 
@@ -144,7 +144,6 @@ def acquaintanceLoc(message):
                 current_user.heat = 1
             if message.text == 'Я мерзляч':
                 current_user.heat = -1
-            #ХУЙ
             text_loc = "ПРЕВОСХОДНО! А погода тебе где нужна?"
             keyboard_loc = types.ReplyKeyboardMarkup(resize_keyboard=True)
             key_loc = types.KeyboardButton(text='Отправить геолокацию', request_location=True)
@@ -297,7 +296,7 @@ def weatherNow(message):
 @bot.message_handler(regexp='Назад к выбору города'u"\U000021A9")
 def weatherNow(message):
     if common_weather_fun(message.chat.id, message.from_user.first_name):
-        msg = bot.send_message(message.chat.id, 'Вводи свое село))')
+        msg = bot.send_message(message.chat.id, 'Вводи свое село))', reply_markup=types.ReplyKeyboardRemove())
         bot.register_next_step_handler(msg, AdvGeoCode)
         return
 
